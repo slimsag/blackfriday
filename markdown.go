@@ -307,7 +307,6 @@ func New(opts ...Option) *Markdown {
 	}
 	if p.extensions&Footnotes != 0 {
 		p.notes = make([]*reference, 0)
-		p.notesRecord = make(map[string]struct{})
 	}
 	return &p
 }

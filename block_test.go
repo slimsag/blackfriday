@@ -704,9 +704,6 @@ func TestUnorderedList(t *testing.T) {
 		"Paragraph\n\n* Linebreak\n",
 		"<p>Paragraph</p>\n\n<ul>\n<li>Linebreak</li>\n</ul>\n",
 
-		"*   List\n\n1. Spacer Mixed listing\n",
-		"<ul>\n<li>List</li>\n</ul>\n\n<ol>\n<li>Spacer Mixed listing</li>\n</ol>\n",
-
 		"*   List\n    * Nested list\n",
 		"<ul>\n<li>List\n\n<ul>\n<li>Nested list</li>\n</ul></li>\n</ul>\n",
 
@@ -744,47 +741,16 @@ func TestUnorderedList(t *testing.T) {
 		"* List\n        extra indent, same paragraph\n",
 		"<ul>\n<li>List\n    extra indent, same paragraph</li>\n</ul>\n",
 
-		"* List\n\n        code block\n\n* List continues",
-		"<ul>\n<li><p>List</p>\n\n<pre><code>code block\n</code></pre></li>\n\n<li><p>List continues</p></li>\n</ul>\n",
+		"* List\n\n        code block\n",
+		"<ul>\n<li><p>List</p>\n\n<pre><code>code block\n</code></pre></li>\n</ul>\n",
 
 		"* List\n\n          code block with spaces\n",
 		"<ul>\n<li><p>List</p>\n\n<pre><code>  code block with spaces\n</code></pre></li>\n</ul>\n",
 
 		"* List\n\n    * sublist\n\n    normal text\n\n    * another sublist\n",
 		"<ul>\n<li><p>List</p>\n\n<ul>\n<li>sublist</li>\n</ul>\n\n<p>normal text</p>\n\n<ul>\n<li>another sublist</li>\n</ul></li>\n</ul>\n",
-
-		`* Foo
-
-        bar
-
-        qux
-`,
-		`<ul>
-<li><p>Foo</p>
-
-<pre><code>bar
-
-qux
-</code></pre></li>
-</ul>
-`,
 	}
 	doTestsBlock(t, tests, 0)
-}
-
-func TestFencedCodeBlockWithinList(t *testing.T) {
-	doTestsBlock(t, []string{
-		"* Foo\n\n    ```\n    bar\n\n    qux\n    ```\n",
-		`<ul>
-<li><p>Foo</p>
-
-<pre><code>bar
-
-qux
-</code></pre></li>
-</ul>
-`,
-	}, EXTENSION_FENCED_CODE)
 }
 
 func TestOrderedList(t *testing.T) {
@@ -866,12 +832,6 @@ func TestOrderedList(t *testing.T) {
 		"1. List\n\n          code block with spaces\n",
 		"<ol>\n<li><p>List</p>\n\n<pre><code>  code block with spaces\n</code></pre></li>\n</ol>\n",
 
-		"1. List\n\n* Spacer Mixed listing\n",
-		"<ol>\n<li>List</li>\n</ol>\n\n<ul>\n<li>Spacer Mixed listing</li>\n</ul>\n",
-
-		"1. List\n* Mixed listing\n",
-		"<ol>\n<li>List</li>\n<li>Mixed listing</li>\n</ol>\n",
-
 		"1. List\n    * Mixted list\n",
 		"<ol>\n<li>List\n\n<ul>\n<li>Mixted list</li>\n</ul></li>\n</ol>\n",
 
@@ -886,26 +846,6 @@ func TestOrderedList(t *testing.T) {
 
 		"1. numbers\n1. are ignored\n",
 		"<ol>\n<li>numbers</li>\n<li>are ignored</li>\n</ol>\n",
-
-		`1. Foo
-
-        bar
-
-
-
-        qux
-`,
-		`<ol>
-<li><p>Foo</p>
-
-<pre><code>bar
-
-
-
-qux
-</code></pre></li>
-</ol>
-`,
 	}
 	doTestsBlock(t, tests, 0)
 }
@@ -1009,14 +949,6 @@ func TestDefinitionList(t *testing.T) {
 			"<dd><p>Definition b</p></dd>\n" +
 			"</dl>\n" +
 			"\n<p>Text 2</p>\n",
-
-		"Term 1\n:   Definition a\n\n    Text 1\n\n    1. First\n    2. Second",
-		"<dl>\n" +
-			"<dt>Term 1</dt>\n" +
-			"<dd><p>Definition a</p>\n\n" +
-			"<p>Text 1</p>\n\n" +
-			"<ol>\n<li>First</li>\n<li>Second</li>\n</ol></dd>\n" +
-			"</dl>\n",
 	}
 	doTestsBlock(t, tests, DefinitionLists)
 }
@@ -1160,7 +1092,7 @@ func TestFencedCodeBlock(t *testing.T) {
 		"<p>``` lisp\nno ending</p>\n",
 
 		"~~~ lisp\nend with language\n~~~ lisp\n",
-		"<pre><code class=\"language-lisp\">end with language\n</code></pre>\n\n<p>lisp</p>\n",
+		"<p>~~~ lisp\nend with language\n~~~ lisp</p>\n",
 
 		"```\nmismatched begin and end\n~~~\n",
 		"<p>```\nmismatched begin and end\n~~~</p>\n",
@@ -1626,7 +1558,7 @@ func TestFencedCodeBlock_EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK(t *testing.T) {
 		"<p>``` lisp\nno ending</p>\n",
 
 		"~~~ lisp\nend with language\n~~~ lisp\n",
-		"<pre><code class=\"language-lisp\">end with language\n</code></pre>\n\n<p>lisp</p>\n",
+		"<p>~~~ lisp\nend with language\n~~~ lisp</p>\n",
 
 		"```\nmismatched begin and end\n~~~\n",
 		"<p>```\nmismatched begin and end\n~~~</p>\n",
@@ -1681,44 +1613,6 @@ func TestListWithMalformedFencedCodeBlock(t *testing.T) {
 
 func TestListWithFencedCodeBlockNoExtensions(t *testing.T) {
 	t.Parallel()
-	// If there is a fenced code block in a list, and FencedCode is not set,
-	// lists should be processed normally.
-	var tests = []string{
-		"1. one\n\n    ```\n    code\n    ```\n\n2. two\n",
-		"<ol>\n<li><p>one</p>\n\n<p><code>\ncode\n</code></p></li>\n\n<li><p>two</p></li>\n</ol>\n",
-
-		"1. one\n\n    ```\n    - code\n    ```\n\n2. two\n",
-		"<ol>\n<li><p>one</p>\n\n<p>```</p>\n\n<ul>\n<li>code\n```</li>\n</ul></li>\n\n<li><p>two</p></li>\n</ol>\n",
-	}
-	doTestsBlock(t, tests, 0)
-}
-
-func TestListWithFencedCodeBlock(t *testing.T) {
-	var tests = []string{
-		"1. one\n\n    ```\n    code\n    ```\n\n2. two\n",
-		"<ol>\n<li><p>one</p>\n\n<pre><code>code\n</code></pre></li>\n\n<li><p>two</p></li>\n</ol>\n",
-		// https://github.com/russross/blackfriday/issues/239
-		"1. one\n\n    ```\n    - code\n    ```\n\n2. two\n",
-		"<ol>\n<li><p>one</p>\n\n<pre><code>- code\n</code></pre></li>\n\n<li><p>two</p></li>\n</ol>\n",
-	}
-	doTestsBlock(t, tests, EXTENSION_FENCED_CODE)
-}
-
-func TestListWithMalformedFencedCodeBlock(t *testing.T) {
-	// Ensure that in the case of an unclosed fenced code block in a list,
-	// no source gets ommitted (even if it is malformed).
-	// See russross/blackfriday#372 for context.
-	var tests = []string{
-		"1. one\n\n    ```\n    code\n\n2. two\n",
-		"<ol>\n<li>one\n\n```\ncode\n\n2. two</li>\n</ol>\n",
-
-		"1. one\n\n    ```\n    - code\n\n2. two\n",
-		"<ol>\n<li>one\n\n```\n- code\n\n2. two</li>\n</ol>\n",
-	}
-	doTestsBlock(t, tests, EXTENSION_FENCED_CODE)
-}
-
-func TestListWithFencedCodeBlockNoExtensions(t *testing.T) {
 	// If there is a fenced code block in a list, and FencedCode is not set,
 	// lists should be processed normally.
 	var tests = []string{

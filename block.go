@@ -101,7 +101,7 @@ func (p *Markdown) block(data []byte) {
 
 		// fenced code block:
 		//
-		// ``` go info string here
+		// ``` go
 		// func fact(n int) int {
 		//     if n <= 1 {
 		//         return n
@@ -336,11 +336,6 @@ func (p *Markdown) html(data []byte, doRender bool) int {
 			return size
 		}
 
-		// check for HTML CDATA
-		if size := p.htmlCDATA(out, data, doRender); size > 0 {
-			return size
-		}
-
 		// no special case recognized
 		return 0
 	}
@@ -441,35 +436,6 @@ func (p *Markdown) htmlComment(data []byte, doRender bool) int {
 		return size
 	}
 	return 0
-}
-
-// HTML comment, lax form
-func (p *parser) htmlComment(out *bytes.Buffer, data []byte, doRender bool) int {
-	i := p.inlineHTMLComment(out, data)
-	return p.renderHTMLBlock(out, data, i, doRender)
-}
-
-// HTML CDATA section
-func (p *parser) htmlCDATA(out *bytes.Buffer, data []byte, doRender bool) int {
-	const cdataTag = "<![cdata["
-	const cdataTagLen = len(cdataTag)
-	if len(data) < cdataTagLen+1 {
-		return 0
-	}
-	if !bytes.Equal(bytes.ToLower(data[:cdataTagLen]), []byte(cdataTag)) {
-		return 0
-	}
-	i := cdataTagLen
-	// scan for an end-of-comment marker, across lines if necessary
-	for i < len(data) && !(data[i-2] == ']' && data[i-1] == ']' && data[i] == '>') {
-		i++
-	}
-	i++
-	// no end-of-comment marker
-	if i >= len(data) {
-		return 0
-	}
-	return p.renderHTMLBlock(out, data, i, doRender)
 }
 
 // HR, which is the only self-closing block tag considered
@@ -1283,15 +1249,6 @@ func (p *Markdown) listItem(data []byte, flags *ListType) int {
 		i++
 	}
 
-	// process the following lines
-	containsBlankLine := false
-	sublist := 0
-	codeBlockMarker := ""
-	if p.flags&EXTENSION_FENCED_CODE != 0 && i > line {
-		// determine if codeblock starts on the first line
-		_, codeBlockMarker = isFenceLine(data[line:i], nil, "", false)
-	}
-
 	// get working buffer
 	var raw bytes.Buffer
 
@@ -1312,11 +1269,11 @@ gatherlines:
 		for i < len(data) && data[i-1] != '\n' {
 			i++
 		}
+
 		// if it is an empty line, guess that it is part of this item
 		// and move on to the next line
 		if p.isEmpty(data[line:i]) > 0 {
 			containsBlankLine = true
-			raw.Write(data[line:i])
 			line = i
 			continue
 		}
@@ -1352,28 +1309,6 @@ gatherlines:
 			// we are in a codeblock, write line, and continue
 			if codeBlockMarker != "" || marker != "" {
 				raw.Write(data[line+indentIndex : i])
-				line = i
-				continue gatherlines
-			}
-		}
-
-		if p.flags&EXTENSION_FENCED_CODE != 0 {
-			// determine if in or out of codeblock
-			// if in codeblock, ignore normal list processing
-			_, marker := isFenceLine(chunk, nil, codeBlockMarker, false)
-			if marker != "" {
-				if codeBlockMarker == "" {
-					// start of codeblock
-					codeBlockMarker = marker
-				} else {
-					// end of codeblock.
-					*flags |= LIST_ITEM_CONTAINS_BLOCK
-					codeBlockMarker = ""
-				}
-			}
-			// we are in a codeblock, write line, and continue
-			if codeBlockMarker != "" || marker != "" {
-				raw.Write(data[line+indent : i])
 				line = i
 				continue gatherlines
 			}
@@ -1456,12 +1391,6 @@ gatherlines:
 		raw.Write(data[line+indentIndex : i])
 
 		line = i
-	}
-
-	// If reached end of data, the Renderer.ListItem call we're going to make below
-	// is definitely the last in the list.
-	if line >= len(data) {
-		*flags |= LIST_ITEM_END_OF_LIST
 	}
 
 	rawBytes := raw.Bytes()

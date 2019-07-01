@@ -272,8 +272,6 @@ func link(p *Markdown, data []byte, offset int) (int, *Node) {
 		i++
 	}
 
-	brace := 0
-
 	// look for the matching closing bracket
 	for level := 1; level > 0 && i < len(data); i++ {
 		switch {
@@ -308,8 +306,8 @@ func link(p *Markdown, data []byte, offset int) (int, *Node) {
 		i++
 	}
 
-	switch {
 	// inline style link
+	switch {
 	case i < len(data) && data[i] == '(':
 		// skip initial whitespace
 		i++
@@ -320,27 +318,14 @@ func link(p *Markdown, data []byte, offset int) (int, *Node) {
 
 		linkB := i
 
-		// look for link end: ' " ), check for new opening braces and take this
-		// into account, this may lead for overshooting and probably will require
-		// some fine-tuning.
+		// look for link end: ' " )
 	findlinkend:
 		for i < len(data) {
 			switch {
 			case data[i] == '\\':
 				i += 2
 
-			case data[i] == '(':
-				brace++
-				i++
-
-			case data[i] == ')':
-				if brace <= 0 {
-					break findlinkend
-				}
-				brace--
-				i++
-
-			case data[i] == '\'' || data[i] == '"':
+			case data[i] == ')' || data[i] == '\'' || data[i] == '"':
 				break findlinkend
 
 			default:
@@ -519,7 +504,6 @@ func link(p *Markdown, data []byte, offset int) (int, *Node) {
 			}
 
 			p.notes = append(p.notes, ref)
-			p.notesRecord[string(ref.link)] = struct{}{}
 
 			link = ref.link
 			title = ref.title
@@ -534,7 +518,6 @@ func link(p *Markdown, data []byte, offset int) (int, *Node) {
 				lr.noteID = len(p.notes) + 1
 				lr.footnote = footnoteNode
 				p.notes = append(p.notes, lr)
-				p.notesRecord[string(lr.link)] = struct{}{}
 			}
 
 			// keep link and title from reference
@@ -1037,7 +1020,7 @@ func isMailtoAutoLink(data []byte) int {
 			nb++
 
 		case '-', '.', '_':
-			// Do nothing.
+			break
 
 		case '>':
 			if nb == 1 {

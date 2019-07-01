@@ -15,8 +15,9 @@ package blackfriday
 
 import (
 	"regexp"
-	"strings"
 	"testing"
+
+	"strings"
 )
 
 func TestEmphasis(t *testing.T) {
@@ -72,33 +73,8 @@ func TestEmphasis(t *testing.T) {
 
 		"*What is A\\* algorithm?*\n",
 		"<p><em>What is A* algorithm?</em></p>\n",
-
-		"some para_graph with _emphasised_ text.\n",
-		"<p>some para_graph with <em>emphasised</em> text.</p>\n",
-
-		"some paragraph with _emphasised_ te_xt.\n",
-		"<p>some paragraph with <em>emphasised</em> te_xt.</p>\n",
-
-		"some paragraph with t_wo bi_ts of _emphasised_ text.\n",
-		"<p>some paragraph with t<em>wo bi</em>ts of <em>emphasised</em> text.</p>\n",
-
-		"un*frigging*believable\n",
-		"<p>un<em>frigging</em>believable</p>\n",
 	}
 	doTestsInline(t, tests)
-}
-
-func TestNoIntraEmphasis(t *testing.T) {
-	tests := []string{
-		"some para_graph with _emphasised_ text.\n",
-		"<p>some para_graph with <em>emphasised</em> text.</p>\n",
-
-		"un*frigging*believable\n",
-		"<p>un*frigging*believable</p>\n",
-	}
-	doTestsInlineParam(t, tests, Options{
-		Extensions: EXTENSION_NO_INTRA_EMPHASIS},
-		0, HtmlRendererParameters{})
 }
 
 func TestReferenceOverride(t *testing.T) {
@@ -490,20 +466,6 @@ func TestInlineLink(t *testing.T) {
 
 		"[link](<../>)\n",
 		"<p><a href=\"../\">link</a></p>\n",
-
-		// Issue 116 in blackfriday
-		"![](http://www.broadgate.co.uk/Content/Upload/DetailImages/Cyclus700(1).jpg)",
-		"<p><img src=\"http://www.broadgate.co.uk/Content/Upload/DetailImages/Cyclus700(1).jpg\" alt=\"\" /></p>\n",
-
-		// no closing ), autolinking detects the url next
-		"[disambiguation](http://en.wikipedia.org/wiki/Disambiguation_(disambiguation) is the",
-		"<p>[disambiguation](<a href=\"http://en.wikipedia.org/wiki/Disambiguation_(disambiguation\">http://en.wikipedia.org/wiki/Disambiguation_(disambiguation</a>) is the</p>\n",
-
-		"[disambiguation](http://en.wikipedia.org/wiki/Disambiguation_(disambiguation)) is the",
-		"<p><a href=\"http://en.wikipedia.org/wiki/Disambiguation_(disambiguation)\">disambiguation</a> is the</p>\n",
-
-		"[disambiguation](http://en.wikipedia.org/wiki/Disambiguation_(disambiguation))",
-		"<p><a href=\"http://en.wikipedia.org/wiki/Disambiguation_(disambiguation)\">disambiguation</a></p>\n",
 	}
 	doLinkTestsInline(t, tests)
 
@@ -1056,34 +1018,6 @@ func TestNestedFootnotes(t *testing.T) {
 
 </div>
 `,
-		`This uses footnote A.[^A]
-
-This uses footnote C.[^C]
-
-[^A]:
-  A note. use itself.[^A]
-[^B]:
-  B note, uses A to test duplicate.[^A]
-[^C]:
-  C note, uses B.[^B]
-`,
-		`<p>This uses footnote A.<sup class="footnote-ref" id="fnref:A"><a href="#fn:A">1</a></sup></p>
-
-<p>This uses footnote C.<sup class="footnote-ref" id="fnref:C"><a href="#fn:C">2</a></sup></p>
-<div class="footnotes">
-
-<hr />
-
-<ol>
-<li id="fn:A">A note. use itself.<sup class="footnote-ref" id="fnref:A"><a href="#fn:A">1</a></sup>
-</li>
-<li id="fn:C">C note, uses B.<sup class="footnote-ref" id="fnref:B"><a href="#fn:B">3</a></sup>
-</li>
-<li id="fn:B">B note, uses A to test duplicate.<sup class="footnote-ref" id="fnref:A"><a href="#fn:A">1</a></sup>
-</li>
-</ol>
-</div>
-`,
 	}
 	doTestsInlineParam(t, tests, TestParams{extensions: Footnotes})
 }
@@ -1144,18 +1078,6 @@ func TestSmartDoubleQuotesNBSP(t *testing.T) {
 	doTestsInlineParam(t, tests, TestParams{HTMLFlags: Smartypants | SmartypantsQuotesNBSP})
 }
 
-func TestSmartDoubleQuotesNbsp(t *testing.T) {
-	var tests = []string{
-		"this should be normal \"quoted\" text.\n",
-		"<p>this should be normal &ldquo;&nbsp;quoted&nbsp;&rdquo; text.</p>\n",
-		"this \" single double\n",
-		"<p>this &ldquo;&nbsp; single double</p>\n",
-		"two pair of \"some\" quoted \"text\".\n",
-		"<p>two pair of &ldquo;&nbsp;some&nbsp;&rdquo; quoted &ldquo;&nbsp;text&nbsp;&rdquo;.</p>\n"}
-
-	doTestsInlineParam(t, tests, Options{}, HTML_USE_SMARTYPANTS|HTML_SMARTYPANTS_QUOTES_NBSP, HtmlRendererParameters{})
-}
-
 func TestSmartAngledDoubleQuotes(t *testing.T) {
 	t.Parallel()
 	var tests = []string{
@@ -1180,18 +1102,6 @@ func TestSmartAngledDoubleQuotesNBSP(t *testing.T) {
 		"<p>two pair of &laquo;&nbsp;some&nbsp;&raquo; quoted &laquo;&nbsp;text&nbsp;&raquo;.</p>\n"}
 
 	doTestsInlineParam(t, tests, TestParams{HTMLFlags: Smartypants | SmartypantsAngledQuotes | SmartypantsQuotesNBSP})
-}
-
-func TestSmartAngledDoubleQuotesNbsp(t *testing.T) {
-	var tests = []string{
-		"this should be angled \"quoted\" text.\n",
-		"<p>this should be angled &laquo;&nbsp;quoted&nbsp;&raquo; text.</p>\n",
-		"this \" single double\n",
-		"<p>this &laquo;&nbsp; single double</p>\n",
-		"two pair of \"some\" quoted \"text\".\n",
-		"<p>two pair of &laquo;&nbsp;some&nbsp;&raquo; quoted &laquo;&nbsp;text&nbsp;&raquo;.</p>\n"}
-
-	doTestsInlineParam(t, tests, Options{}, HTML_USE_SMARTYPANTS|HTML_SMARTYPANTS_ANGLED_QUOTES|HTML_SMARTYPANTS_QUOTES_NBSP, HtmlRendererParameters{})
 }
 
 func TestSmartFractions(t *testing.T) {
@@ -1302,11 +1212,5 @@ func BenchmarkSmartDoubleQuotes(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		runMarkdown("this should be normal \"quoted\" text.\n", params)
-	}
-}
-
-func BenchmarkSmartDoubleQuotes(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		runMarkdownInline("this should be normal \"quoted\" text.\n", Options{}, HTML_USE_SMARTYPANTS, HtmlRendererParameters{})
 	}
 }
